@@ -1,0 +1,145 @@
+C51 COMPILER V9.01   MAIN                                                                  02/20/2017 15:30:13 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\main.obj
+COMPILER INVOKED BY: D:\Program Files (x86)\Keil_v5\C51\BIN\C51.EXE ..\Src\main.c BROWSE INCDIR(..\Src) DEBUG OBJECTEXTE
+                    -ND PRINT(.\main.lst) OBJECT(.\main.obj)
+
+line level    source
+
+   1          // 文件名 ：main.c
+   2          // 作者   : 赵成华 陈统 何立邦
+   3          // 日期   : 2017年 2月 15日
+   4          
+   5          #include "STC12C5410AD.H"
+   6          #include "newtype.h"
+   7          #include "Globle.h"
+   8          #include "motor.h"      
+   9          #include "Serial.h"
+  10          #include "string.h"
+  11          #include "Timer.h"
+  12          
+  13          union nt_uEVNT   myEvnt ;                                       // 事件标志位别名 全局
+  14          nt_Massage               myMassage ;                                                            // 按摩相关数据结构 全局
+  15          nt_Serial                mySerial ;                                                                     // 串口的数据结构  全局
+  16          nt_Time          myTime ;                                                                       // 定时器数据结构  全局
+  17          
+  18          u8 SendMsg[] = {0x00,0x00,0x78,0x1E,0X00,0x00,0xBB} ;           // 串口数据
+  19          
+  20          // 函数名 ：全局变量初始化函数
+  21          // 参数   ：无 
+  22          // 返回值 ：无
+  23          // 注释   : 无 
+  24          
+  25          void Reset_Global(void)                                 
+  26          {
+  27   1              myEvnt.ALL =0;                                                                                  // myEvnt内所有标志初始化
+  28   1              memset( &mySerial ,0 ,sizeof(mySerial)) ;                               // mySerial 内所有标志初始化
+  29   1              memset( &myMassage ,0 ,sizeof(myMassage)) ;                             // myMassage 内所有标志初始化
+  30   1              memset( &myTime ,0 ,sizeof(myTime)) ;                                   // myTime 内所有标志初始化
+  31   1              
+  32   1          SendMsg[0] = SendMsg[0] & 0x01;
+  33   1              SendMsg[1] = 0x00;
+  34   1              SendMsg[2] = 0x78;
+  35   1              SendMsg[3] = 0x1E;                                                      // 串口数据初始化               
+  36   1      }
+  37          
+  38          // 函数名 ：系统始化函数
+  39          // 参数   ：无 
+  40          // 返回值 ：无
+  41          // 注释   : 无
+  42          void SysInit(void)
+  43          {
+  44   1              WDT_CONTR = 0x3c;                                                                               // 开机喂狗
+  45   1              
+  46   1              Init_Serial() ;                                                                                 // 串口初始化
+  47   1              Init_Timer();                                                                                           // 定时器初始化
+  48   1              Init_Motor();                                                                                           // 电机初始化
+  49   1          Init_PWM() ;                                                                                                // PWM波初始化
+  50   1              
+  51   1              myMassage.speed = INIT_SPEED ;                                  // 电机速度初始化
+  52   1      }
+  53          
+  54          // 函数名 ：主函数
+C51 COMPILER V9.01   MAIN                                                                  02/20/2017 15:30:13 PAGE 2   
+
+  55          // 参数   ：无 
+  56          // 返回值 ：无
+  57          // 注释   : 无
+  58          
+  59          void main (void)                                                                                
+  60          {
+  61   1              
+  62   1              myEvnt.Bit.IsReset_F = true ;                                                                           // 申请开机重置
+  63   1              
+  64   1              while (1)
+  65   1              {
+  66   2                      if( true == myEvnt.Bit.IsReset_F )                                                              // 开始重置
+  67   2                      {
+  68   3                              myEvnt.Bit.IsReset_F = false ;  
+  69   3                      Reset_Global() ;
+  70   3                  SysInit();// 正确位置判断未加入
+  71   3                      }
+  72   2      
+  73   2                      if( true == myEvnt.Bit.IsSerial_RX )                                                    // 开始串口处理
+  74   2                      {
+  75   3                              myEvnt.Bit.IsSerial_RX = false ;
+  76   3                              SerialAnalysis() ;                                                                                      // 串口数据处理
+  77   3                      }
+  78   2              
+  79   2                      if( true == myEvnt.Bit.IsAllMotorsStop)                                 // 所有电机停止处理
+  80   2                      {
+  81   3                              myEvnt.Bit.IsAllMotorsStop = false ;
+  82   3                              allMotorsStop() ;                                                                                       // 所有电机停止工作
+  83   3                      }
+  84   2                      
+  85   2                      if( true == myEvnt.Bit.IsChangeWidth && 0x06 == mySerial.action_N )                                                              
+             -   // 申请拍打宽度调整
+  86   2                      {
+  87   3                              myEvnt.Bit.IsChangeWidth = false ;
+  88   3                              changeWidth();          
+  89   3                      }
+  90   2                      
+  91   2                      if( true == myEvnt.Bit.IsPer || ( 0x06 == mySerial.action_N && true == myEvnt.Bit.IsChange ))                       
+             -             // 申请拍打敲背
+  92   2                      {                                                                                                                                                                                                                                        
+  93   3                              myEvnt.Bit.IsPer = false ;
+  94   3                              myEvnt.Bit.IsChange = false ;                                   
+  95   3                              per();                          
+  96   3                      }
+  97   2                      
+  98   2                      if( true == myEvnt.Bit.IsKne || ( 0x05 == mySerial.action_N && true == myEvnt.Bit.IsChange ))                                       
+             -// 申请揉捏按摩
+  99   2                      {
+ 100   3                              myEvnt.Bit.IsKne = false ;
+ 101   3                              myEvnt.Bit.IsChange = false ;                                           
+ 102   3                              kne() ;                         
+ 103   3                      }
+ 104   2                      
+ 105   2                      if( true == myEvnt.Bit.IsPerKne || ( 0x04 == mySerial.action_N && true == myEvnt.Bit.IsChange ))                                // 
+             -申请揉捏按摩和拍打敲背
+ 106   2                      {
+ 107   3                              myEvnt.Bit.IsPerKne = false ;
+ 108   3                              myEvnt.Bit.IsChange = false ;                                           
+ 109   3                              per_kne() ;                             
+ 110   3                      }
+ 111   2              }
+ 112   1      }
+C51 COMPILER V9.01   MAIN                                                                  02/20/2017 15:30:13 PAGE 3   
+
+ 113          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    390    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     22    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
