@@ -51,14 +51,14 @@ void Timer0() interrupt 1
 	
 	if( TIME_DOG == myTime.Counter[0] )				// 常量作为左值提高代码的容错性
 	{
-		WDT_CONTR = 0x3c;												// 250ms喂狗
-		myTime.Counter[0]=0;										//	
+		WDT_CONTR = 0x3c;							// 250ms喂狗
+		myTime.Counter[0]=0;										
 	}
 	
 	if( TIME_SEC == myTime.Counter[1] )				// 毫秒计时器 62.5ms
 	{
 		myTime.Counter[1] = 0 ;	
-		myTime.Counter[2] ++ ;									// 秒计数器计数
+		myTime.Counter[2] ++ ;						// 秒计数器计数
 		
 		// 此处可以申请1秒事件
 	}
@@ -66,13 +66,15 @@ void Timer0() interrupt 1
 	if( TIME_MIN == myTime.Counter[2] )				
 	{
 		myTime.Counter[2] = 0 ;	
-		// 此处可以申请1分钟事件
-		SendMsg[3] -- ;									  			// 一分钟倒计时	
+		// 此处可以申请1分钟事件									
+		if( 0 == (SendMsg[1] & 0x01) )				    // 没有按下暂停的时候，倒计时			
+		{	
+			myTime.Display -- ;						// 一分钟倒计时	
+		}
 		
-		if( 0 == SendMsg[3] )
+		if( 0 == myTime.Display )
 		{
-			myEvnt.Bit.IsPOWER_OFF = true ; 			// 申请关机 
-			SendMsg[0] = SendMsg[0] & (~0x01) ;
+			myEvnt.Bit.IsPOWER_OFF = true ; 	   	// 申请关机 
  		}
 	}
 	
@@ -86,7 +88,7 @@ void Timer0() interrupt 1
 void ext0() interrupt 0 
 {
 	myMassage.CycleUpDown ++ ;
- }
+}
 
 
 // 函数名 ：外部中断1函数

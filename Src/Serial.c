@@ -32,7 +32,7 @@ void Serial() interrupt 4  									// 接收中断服务程序
 {
 
 	RI = 0;                    								// 接收标记位清零
-	mySerial.Res = SBUF;										// 串口接收完成，将串口接收到的值存放在串口接收数据结构
+	mySerial.Res = SBUF;									// 串口接收完成，将串口接收到的值存放在串口接收数据结构
 
 	myEvnt.Bit.IsSerial_RX = true;							// 串口接收完成，申请数据处理
 }
@@ -57,21 +57,20 @@ void SerialAnalysis (void)
 					while( !TI );
 						TI=0;
 				}
-						ES = 1;
+				ES = 1;
 			break;
 	
 		case 0X03 :														// 接收到开机键按钮
 				if( !(SendMsg[0] & 0x01) ) 								// 目前关机状态收到开机指令
 				{		
-					SendMsg[0] = SendMsg[0] | 0x01 ;		
+					SendMsg[0] = SendMsg[0] | 0x01 ;
+					myEvnt.Bit.IsReset_F = true ;          				// 申请重置
 				}
 				else
 				{
-					SendMsg[0] = SendMsg[0] & (~0x01) ;
+					SendMsg[0] = SendMsg[0] & (~0x01) ;					// 第二次按开机键申请关机
+					myEvnt.Bit.IsPOWER_OFF = true ;
 				}
-				mySerial.action_N = 0x00;
-				myEvnt.Bit.IsReset_F = true ;          					// 申请重置	
-			break;	
 		
 		case 0x01 :														// 接收到定时按键
 				if( SendMsg[3] == 0x1E)
@@ -89,17 +88,37 @@ void SerialAnalysis (void)
 			break;																
 		
 		case 0x02 : 													// PAUSE暂停
-				if(SendMsg[1] & 0x01)
-				{
-                    SendMsg[1] = SendMsg[1] & 0xF0;
-					myEvnt.Bit.IsChange = true ;
-				}
-				else
-				{
-                    SendMsg[1] = SendMsg[1] & 0xF0 | 0x01;
+				if(SendMsg[1] & 0x01)									
+				{														// 第二次按下暂停键 恢复工作
+					SendMsg[1] = SendMsg[1] & 0xF0;
+					myEvnt.Bit.IsStoping = false ;
+					switch(mySerial.action_N)
+					{
+					 		case PER_KNE :
+				                    myEvnt.Bit.IsPerKne = true ;		    			// 申请同时按摩和捶背
+							    break ;
+							
+							case KNE :
+									myEvnt.Bit.IsKne = true ;							// 申请揉捏
+								break ;
+							
+							case PER :
+									myEvnt.Bit.IsPer = true ;							// 申请捶背
+								break ;
+							
+							default : break ;
+					}
 					
 				}
-				myEvnt.Bit.IsAllMotorsStop = true ;					// 申请所有电机停止工作
+				else													// 第一次按下暂停键
+				{
+				    SendMsg[1] = SendMsg[1] & 0xF0 | 0x01;
+					myEvnt.Bit.IsStoping = true ;
+					myEvnt.Bit.IsAllMotorsStop = true ;					// 申请所有电机停止工作					
+					
+
+				}
+				
 			break;  														
 		
 		case 0x04 : 
@@ -107,53 +126,85 @@ void SerialAnalysis (void)
 			break;  													
 		
 		case 0x05 : 													// neck&shouder改成auto_2
-					SendMsg[0]=SendMsg[0] & 0x0F | 0x20 ;
-					SendMsg[1]=SendMsg[1] & 0x00 ;
-					
+//					SendMsg[0]=SendMsg[0] & 0x0F | 0x20 ;
+//					SendMsg[1]=SendMsg[1] & 0x00 ;
+
+					if(false == myEvnt.Bit.IsAuto_Two)
+					{  			
+				     	SendMsg[0]=SendMsg[0] & 0x0F | 0x20 ;
+				    	SendMsg[1]=SendMsg[1] & 0x00 ;
+					    mySerial.action_N = ATUO_TWO;					// 动作编号2
+						myEvnt.Bit.IsAutoBegin = true ;					// 初始化计时判断
+						myEvnt.Bit.IsAuto_Two = true ;		  		    // 申请自动模式2							
+						myMassage.autoNum = 0x00;						// 初始化自动状态编号
+					    myEvnt.Bit.IsAuto_One = false ;		  		    
+						myEvnt.Bit.IsAuto_Three = false ;
+						myEvnt.Bit.IsStoping = false ;	
+					}
+					else
+					{
+					    SendMsg[0] = SendMsg[0] & 0xDF;
+					    myEvnt.Bit.IsAuto_Two = false;					// 申请关闭自动模式2
+						myEvnt.Bit.IsStoping = true ;
+					}
 					myEvnt.Bit.IsAllMotorsStop = true ;					// 申请所有电机停止工作
-					myEvnt.Bit.IsAuto_Two = true ;						// 申请自动模式2
-					mySerial.action_N = 0x02;							// 动作编号2
-					
-					myMassage.CycleKne = 0 ;							// 揉捏圈数计数清零
-					myMassage.AngleCount = 0 ; 							// 揉捏角度计数清零
 			break;  													
 
 		case 0x06 : 
 					SendMsg[0]=SendMsg[0] & 0x0F | 0x10;				// back&waist改成auto_3
 					SendMsg[1]=SendMsg[1] & 0x00 ;
 					
-					myEvnt.Bit.IsAllMotorsStop = true ;					// 申请所有电机停止工作
+					myEvnt.Bit.IsAllMotorsStop  = true ;				// 申请所有电机停止工作
 					myEvnt.Bit.IsAuto_Three = true ;					// 申请自动模式3
-					mySerial.action_N = 0x03;							// 动作编号3		
+					mySerial.action_N = ATUO_THREE;						// 动作编号3		
 			break;  
 	
 		case 0x07 : 													// pause改成auto_1
-					SendMsg[1] = SendMsg[1] & 0x00 | 0x40;
-					SendMsg[0] = SendMsg[0] & 0x0F;
+//					SendMsg[0] = SendMsg[0] & 0x0F;
 					
+					if(false == myEvnt.Bit.IsAuto_One)
+					{  			
+					    SendMsg[1] = SendMsg[1] & 0x00 | 0x40;
+				    	SendMsg[0] = SendMsg[0] & 0x0F;
+					    mySerial.action_N = ATUO_ONE;					// 动作编号1
+						myMassage.autoNum = 0x00;						// 初始化自动状态编号
+						myEvnt.Bit.IsAutoBegin = true ;					// 初始化计时判断
+						myEvnt.Bit.IsAuto_One = true ;		  		    // 申请自动模式1
+						myEvnt.Bit.IsAuto_Two = false ;		  		    
+						myEvnt.Bit.IsAuto_Three = false ;
+						myEvnt.Bit.IsStoping = false ;		  		
+	
+					}
+					else
+					{
+					    SendMsg[1] = SendMsg[1] & 0x00;
+					    myEvnt.Bit.IsAuto_One = false ;					// 申请关闭自动模式1
+					    myEvnt.Bit.IsStoping = true ;
+					}
 					myEvnt.Bit.IsAllMotorsStop = true ;					// 申请所有电机停止工作
-					myEvnt.Bit.IsAuto_One = true ;						// 申请自动模式1
-					mySerial.action_N = 0x01;							// 动作编号1
+
 			break;  
 		
 		case 0x09 :													    // 捶背percussion
 					SendMsg[1] = SendMsg[1] & 0x00;
 					SendMsg[0] = SendMsg[0] & 0x0F | 0x80;
-		
+					myEvnt.ALL = 0;
 					myEvnt.Bit.IsAllMotorsStop = true ;					// 申请所有电机停止工作		
 					myEvnt.Bit.IsPer = true ;							// 申请捶背
+					myEvnt.Bit.IsStoping = false ;
 					
-					mySerial.action_N = 0x06;
+					mySerial.action_N = PER ;
 			break;  
 		
 		case 0x0A : 													// percussion+knead	捶背和按摩
 					SendMsg[0] = SendMsg[0] & 0x0F;
 					SendMsg[1] = SendMsg[1] & 0x00 | 0x02;
-					
+					myEvnt.ALL = 0;
 					myEvnt.Bit.IsAllMotorsStop = true ;					// 申请所有电机停止工作
 					myEvnt.Bit.IsPerKne = true ;		    			// 申请同时按摩和捶背
+					myEvnt.Bit.IsStoping = false ;
 						
-					mySerial.action_N = 0x04;
+					mySerial.action_N = PER_KNE;
 			
 			break; 
 		
@@ -173,23 +224,39 @@ void SerialAnalysis (void)
 					{
 						myMassage.speed = INIT_SPEED ;
 					}
-					
-					myEvnt.Bit.IsChange = true ;
+					switch(mySerial.action_N)
+					{
+					 		case PER_KNE :
+				                    myEvnt.Bit.IsPerKne = true ;		    			// 申请同时按摩和捶背
+							    break ;
+							
+							case KNE :
+									myEvnt.Bit.IsKne = true ;							// 申请揉捏
+								break ;
+							
+							case PER :
+									myEvnt.Bit.IsPer = true ;							// 申请捶背
+								break ;
+							
+							default : break ;
+					}
+
 					
 			break;  
 									
-		case 0x0C : 
+		case 0x0C : 													// seat向前移动     //0C AA... 0C 1E
 					seatm_up =0  ;
 					seatm_dn =1  ;					
-			break;  													// seat向前移动     //0C AA... 0C 1E
+			break;  													
 		
 		case 0X0D : 													// kneading 按摩揉捏
 					SendMsg[1] = SendMsg[1] & 0x00;
 					SendMsg[0] = SendMsg[0] & 0x0F | 0x40;
-				
+					myEvnt.ALL =0;
 					myEvnt.Bit.IsAllMotorsStop = true;					// 申请所有电机停止工作
-		     		myEvnt.Bit.IsKne =  true;													 // 申请揉捏
-					mySerial.action_N=0x05;	 
+		     		myEvnt.Bit.IsKne =  true;						    // 申请揉捏
+					mySerial.action_N = KNE ;
+					myEvnt.Bit.IsStoping = false ;	 
 			break;  
 		
 		case 0x0E : 																// 申请按摩宽度调整
@@ -197,7 +264,7 @@ void SerialAnalysis (void)
 			break;  																
 		
 		case 0x0F : 
-					if(upCheck)
+					if(upCheck && (ATUO_ONE != mySerial.action_N || ATUO_TWO != mySerial.action_N || ATUO_THREE != mySerial.action_N))
 				 	{
 					 	upm=0;
 					}
@@ -220,7 +287,7 @@ void SerialAnalysis (void)
 			break;  																// back向前移动     // 12 AA... 12 22 
 		
 		case 0x13 :
-					if(dnCheck)
+					if(dnCheck && (ATUO_ONE != mySerial.action_N || ATUO_TWO != mySerial.action_N || ATUO_THREE != mySerial.action_N))
 					{
 					    dnm=0;
 					} 		

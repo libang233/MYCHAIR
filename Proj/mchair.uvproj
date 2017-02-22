@@ -366,11 +366,6 @@
               <FileType>1</FileType>
               <FilePath>..\Src\motor.c</FilePath>
             </File>
-            <File>
-              <FileName>reset.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Src\reset.c</FilePath>
-            </File>
           </Files>
         </Group>
       </Groups>

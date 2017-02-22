@@ -32,7 +32,9 @@ void Reset_Global(void)
     SendMsg[0] = SendMsg[0] & 0x01;
 	SendMsg[1] = 0x00;
 	SendMsg[2] = 0x78;
-	SendMsg[3] = 0x1E;			                          	// 串口数据初始化		
+	SendMsg[3] = 0x1E;			                          	// 串口数据初始化
+
+	myTime.Display = SendMsg[3] ; 							// 为显示时间赋初值
 }
 
 // 函数名 ：系统始化函数
@@ -47,8 +49,6 @@ void SysInit(void)
 	Init_Timer();												// 定时器初始化
 	Init_Motor();												// 电机初始化
     Init_PWM() ;												// PWM波初始化
-	
-	myMassage.speed = INIT_SPEED ;		                      	// 电机速度初始化
 }
 
 // 函数名 ：主函数
@@ -62,12 +62,32 @@ void main (void)
 	myEvnt.Bit.IsReset_F = true ;										// 申请开机重置
 	
 	while (1)
-	{
+	{	
+		{																// 块语句:硬件死机检测
+			while(!upCheck && !dnCheck)
+			{
+				allMotorsStop();
+			}
+			
+			if (!upCheck)
+				upm=1;
+			if (!dnCheck)
+				dnm=1;
+		}
+		
+		if( true == myEvnt.Bit.IsPOWER_OFF ) 							// 关机
+		{
+			myEvnt.Bit.IsPOWER_OFF = false ;					
+			allMotorsStop() ;
+			myEvnt.Bit.IsStoping = true;
+		}
+		
 		if( true == myEvnt.Bit.IsReset_F )								// 开始重置
 		{
 			myEvnt.Bit.IsReset_F = false ;	
 	    	Reset_Global() ;
-            SysInit();// 正确位置判断未加入
+            SysInit() ;
+			reset() ;													
 		}
 
 		if( true == myEvnt.Bit.IsSerial_RX )							// 开始串口处理
@@ -76,38 +96,48 @@ void main (void)
 			SerialAnalysis() ;											// 串口数据处理
 		}
 	
-		if( true == myEvnt.Bit.IsAllMotorsStop)			            	// 所有电机停止处理
+		if( true == myEvnt.Bit.IsAllMotorsStop )			          	// 所有电机停止处理
 		{
 			myEvnt.Bit.IsAllMotorsStop = false ;
 			allMotorsStop() ;											// 所有电机停止工作
 		}
 		
-		if( true == myEvnt.Bit.IsChangeWidth && 0x06 == mySerial.action_N )				                                    // 申请拍打宽度调整
+		
+		if( true == myEvnt.Bit.IsChangeWidth )				            // 申请拍打宽度调整
 		{
 			myEvnt.Bit.IsChangeWidth = false ;
-			changeWidth();		
+			ChangeWidth();		
 		}
 		
-		if( true == myEvnt.Bit.IsPer || ( 0x06 == mySerial.action_N && true == myEvnt.Bit.IsChange )) 	   		     	    // 申请拍打敲背
+		if( true == myEvnt.Bit.IsPer && false == myEvnt.Bit.IsStoping ) 	   		     	   		// 申请拍打敲背
 		{																													 
-			myEvnt.Bit.IsPer = false ;
-			myEvnt.Bit.IsChange = false ;					
+			myEvnt.Bit.IsPer = false ;			
 			per();				
 		}
 		
-		if( true == myEvnt.Bit.IsKne || ( 0x05 == mySerial.action_N && true == myEvnt.Bit.IsChange )) 			 		    // 申请揉捏按摩
+		if( true == myEvnt.Bit.IsKne && false == myEvnt.Bit.IsStoping ) 			 		    	// 申请揉捏按摩
 		{
-			myEvnt.Bit.IsKne = false ;
-			myEvnt.Bit.IsChange = false ; 						
+			myEvnt.Bit.IsKne = false ;						
 			kne() ;				
 		}
 		
-		if( true == myEvnt.Bit.IsPerKne || ( 0x04 == mySerial.action_N && true == myEvnt.Bit.IsChange )) 				// 申请揉捏按摩和拍打敲背
+		if( true == myEvnt.Bit.IsPerKne && false == myEvnt.Bit.IsStoping ) 							// 申请揉捏按摩和拍打敲背
 		{
-			myEvnt.Bit.IsPerKne = false ;
-			myEvnt.Bit.IsChange = false ;  						
+			myEvnt.Bit.IsPerKne = false ;					
 			per_kne() ;				
+		} 
+	    
+        if( true == myEvnt.Bit.IsAuto_One && false == myEvnt.Bit.IsStoping )
+		{																			
+		   auto_one();												                                 //申请自动1
 		}
+
+		if( true == myEvnt.Bit.IsAuto_Two && false == myEvnt.Bit.IsStoping )
+		{
+		    auto_two();											                              		 //申请自动2
+		}
+				
+//		SendMsg[3] = myTime.Display ;							                                     // 时刻刷新发送的显示时间
 	}
 }
 

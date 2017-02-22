@@ -105,26 +105,74 @@ void allMotorsStop(void)
 	// sec=0;
 }
 
+// 函数名 ：所有电机都继续工作
+// 参数   ：无
+// 返回值 ：无
+// 注释   : 未调试 此函数暂时未添加其他块语句，如果最终代码仍然未添加块语句，也可以将此代码移置主函数
+//void allMotorsGoOn(void)
+//{
+//	switch( mySerial.action_N )
+//	{
+//		case ATUO_ONE : 
+//				myEvnt.Bit.IsAuto_One = true ;						// 申请自动模式1
+//			break ;
+//		
+//		case ATUO_TWO : 
+//				myEvnt.Bit.IsAuto_Two = true ;						// 申请自动模式2
+//			break ;
+//		
+//		case ATUO_THREE : 
+//				myEvnt.Bit.IsAuto_Three = true ;					// 申请自动模式3
+//			break ;
+//		
+//		case PER_KNE :
+//				myEvnt.Bit.IsPerKne = true ;		    			// 申请同时按摩和捶背
+//		    break ;
+//		
+//		case KNE :
+//				myEvnt.Bit.IsKne = true ;							// 申请揉捏
+//			break ;
+//		
+//		case PER :
+//				myEvnt.Bit.IsPer = true ;							// 申请捶背
+//			break ;
+//		
+//		default : break ;
+//	}
+//}
+
+
 // 函数名 ：调整宽度
 // 参数   ：无 
 // 返回值 ：无
 // 注释   : 已调试
 
-void changeWidth(void)
+void ChangeWidth(void)
 {
-    u8 i1;
-    i1 = myMassage.AngleCount ;
-    if(i1<5)
+    u8 Last_AngleCount;
+    Last_AngleCount = myMassage.AngleCount ;
+	
+    if(Last_AngleCount<5)
     {
-	     while( myMassage.AngleCount < i1 + 3)
-		 CCAP0H = CCAP0L= myMassage.speed;
-		 CCAP0H = CCAP0L=0;
+	     while( myMassage.AngleCount < Last_AngleCount + 3)
+		 {
+			CCAP0H = WiDTH_SPEED;
+			CCAP0L = WiDTH_SPEED;
+		 }
+		
+		CCAP0H = 0;
+		CCAP0L = 0;
 	}
 	else
 	{	
 	    while( myMassage.AngleCount != 0)
-	    CCAP0H = CCAP0L= WiDTH_SPEED;
-	    CCAP0H = CCAP0L=0;
+	    {
+			CCAP0H = WiDTH_SPEED ; 
+			CCAP0L = WiDTH_SPEED ;
+		}
+		
+	    CCAP0H = 0;
+		CCAP0L = 0;
 	}   
 }
 
@@ -132,59 +180,122 @@ void changeWidth(void)
 // 参数   ：无 
 // 返回值 ：无
 
-void auto_1(void)
+void auto_one(void)
 {
-       
+    switch(myMassage.autoNum)
+	{
+	    case 0x00:
+		     myEvnt.Bit.IsAllMotorsStop = true;
+	 		 if(upCheck)
+			 {
+			     upm = 0;
+			 }
+			 else
+			 {
+			     upm = 1;
+			     myMassage.autoNum = 0x01;
+			 }
+			 break;
+         case 0x01:
+		     if(dnCheck)
+			 {
+			     dnm = 0;
+				 myMassage.speed = INIT_SPEED;
+		         myEvnt.Bit.IsPer = true; 
+			 }
+			 else
+			 {
+			     dnm = 1;
+				 myEvnt.Bit.IsAllMotorsStop = true;
+				 myMassage.autoNum = 0x02;
+			 }
+		      
+			 break; 
+		 case 0x02 :
+		     if( true == myEvnt.Bit.IsAutoBegin)
+			 {
+				 myEvnt.Bit.IsChangeWidth = true;
+				 myMassage.nowTime[0] = myTime.Counter[2];
+				 myMassage.nowTime[1] = myTime.Display;
+				 myEvnt.Bit.IsAutoBegin = false;
+			 }
+			 else
+			 {
+			     myMassage.speed = HIGH_SPEED;
+				 myEvnt.Bit.IsPer = true;
+			     myMassage.DTime = myTime.Counter[2] - myMassage.nowTime[0] + ( myMassage.nowTime[1] - myTime.Display) * 60;
+			     if( myMassage.DTime >= 5)
+				 {
+				     myEvnt.Bit.IsAllMotorsStop = true;
+					 myEvnt.Bit.IsAutoBegin = true;
+					 myMassage.autoNum = 0x03;
+				 }
+			     
+			 }
+			 break;
+
+	     case 0x03:
+		     if(upCheck)
+			 {
+			     upm = 0;   
+			 }
+			 else
+			 {
+				 myMassage.autoNum = 0x04;
+			 }
+			 break;
+    }    
+		       
 }
 
-//void handle(void)
-//{
-//   	   if(reset_F)
-//			reset();
-//		else if(SendMsg[0] & 0x01 && !(SendMsg[1] & 0x01))    //开启电源且未暂停
-//		{
-//       if(action_N==0x01)
-//					auto_1();	
-//			 if(action_N==0x02)
-//					auto_2();	
-//			 if(action_N==0x03)
-//					auto_3();	
-//			 if(action_N==0x04)
-//					per_kne(speed);	
-//			 if(action_N==0x05)
-//					kne(speed);	
-//			 if(action_N==0x06)
-//					per(speed);	
-//			 if(action_N==0x06 && width_F)    //width宽度调整按钮按下
-//			 { 
-//				u8 i1;
-//				 width_F=0;
-//				 i1=mdb;
-//				 if( i1 <5)
-//				 {
-//					 while(mdb<i1+3)
-//					 CCAP0H = CCAP0L=speed;
-//					 CCAP0H = CCAP0L=0;
-//				 }
-//				 else
-//				 {	while(mdb!=0)
-//					 CCAP0H = CCAP0L=speed;
-//					 CCAP0H = CCAP0L=0;
-//				 }
-//							
-//				}
-//					 
-//		}	
-//		if(SendMsg[1] & 0x01)  //暂停
-//			allMotorsStop();
-//}
+// 函数名 ：自动模式1
+// 参数   ：无 
+// 返回值 ：无
 
-//void reset(void)  //重置
-//{
-//	allMotorsStop();
-//	init();
-//	reset_F=0;
-//}
+void auto_two(void)
+{
+     switch(myMassage.autoNum)
+	 {
+	     case 0x00:
+
+		     myMassage.CycleUpDown = 0;
+			 myEvnt.Bit.IsAutoBegin = false;
+			 dnm = 0;
+			 myMassage.autoNum = 0x01;
+			 break;
+
+	     case 0x01:
+		     
+			 if( 10 <= myMassage.CycleUpDown)
+			 {
+			     dnm = 1;
+			 }
+			 break;
+
+		 
+			 
+	 }
+}
+
+
+void reset(void)  
+{
+	
+	if(upCheck)					         		// 没有达到最顶端，初始化是要达到最顶端
+	{
+		upm = 0; 									// 向上运动直到到顶
+		myEvnt.Bit.IsReset_F = true ;
+	}
+	else
+	{
+	    upm = 1;
+		
+	}
+
+
+	
+	
+}
 
 
 		

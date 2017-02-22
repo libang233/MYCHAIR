@@ -1,4 +1,4 @@
-C51 COMPILER V9.01   TIMER                                                                 02/20/2017 15:30:13 PAGE 1   
+C51 COMPILER V9.01   TIMER                                                                 02/22/2017 17:27:16 PAGE 1   
 
 
 C51 COMPILER V9.01, COMPILATION OF MODULE TIMER
@@ -61,16 +61,16 @@ line level    source
   51   1              
   52   1              if( TIME_DOG == myTime.Counter[0] )                             // 常量作为左值提高代码的容错性
   53   1              {
-  54   2                      WDT_CONTR = 0x3c;                                                                                               // 250ms喂狗
-C51 COMPILER V9.01   TIMER                                                                 02/20/2017 15:30:13 PAGE 2   
+  54   2                      WDT_CONTR = 0x3c;                                                       // 250ms喂狗
+C51 COMPILER V9.01   TIMER                                                                 02/22/2017 17:27:16 PAGE 2   
 
-  55   2                      myTime.Counter[0]=0;                                                                            //      
+  55   2                      myTime.Counter[0]=0;                                                                            
   56   2              }
   57   1              
   58   1              if( TIME_SEC == myTime.Counter[1] )                             // 毫秒计时器 62.5ms
   59   1              {
   60   2                      myTime.Counter[1] = 0 ; 
-  61   2                      myTime.Counter[2] ++ ;                                                                  // 秒计数器计数
+  61   2                      myTime.Counter[2] ++ ;                                          // 秒计数器计数
   62   2                      
   63   2                      // 此处可以申请1秒事件
   64   2              }
@@ -78,56 +78,58 @@ line level    source
   66   1              if( TIME_MIN == myTime.Counter[2] )                             
   67   1              {
   68   2                      myTime.Counter[2] = 0 ; 
-  69   2                      // 此处可以申请1分钟事件
-  70   2                      SendMsg[3] -- ;                                                                                         // 一分钟倒计时 
-  71   2                      
-  72   2                      if( 0 == SendMsg[3] )
-  73   2                      {
-  74   3                              myEvnt.Bit.IsPOWER_OFF = true ;                         // 申请关机 
-  75   3                              SendMsg[0] = SendMsg[0] & (~0x01) ;
-  76   3                      }
-  77   2              }
-  78   1              
-  79   1      }
-  80          
-  81          // 函数名 ：外部中断0函数
-  82          // 参数   ：无 
-  83          // 返回值 ：无
-  84          // 注释   : 无
-  85          
-  86          void ext0() interrupt 0 
-  87          {
-  88   1              myMassage.CycleUpDown ++ ;
-  89   1       }
-  90          
-  91          
-  92          // 函数名 ：外部中断1函数
-  93          // 参数   ：无 
-  94          // 返回值 ：无
-  95          // 注释   : 无
-  96          void ext1() interrupt 2 
-  97          {
-  98   1              myMassage.AngleCount ++ ;
-  99   1              
- 100   1              if( 0 == mda_pin )
- 101   1              {
- 102   2                      myMassage.CycleKne ++ ;
- 103   2                      myMassage.AngleCount = 0;
- 104   2                      //msg[3]--;
- 105   2              }
- 106   1      }
- 107          
+  69   2                      // 此处可以申请1分钟事件                                                                        
+  70   2                      if( 0 == (SendMsg[1] & 0x01) )                              // 没有按下暂停的时候，倒计时                       
+  71   2                      {       
+  72   3                              myTime.Display -- ;                                             // 一分钟倒计时 
+  73   3                      }
+  74   2                      
+  75   2                      if( 0 == myTime.Display )
+  76   2                      {
+  77   3                              myEvnt.Bit.IsPOWER_OFF = true ;                 // 申请关机 
+  78   3                      }
+  79   2              }
+  80   1              
+  81   1      }
+  82          
+  83          // 函数名 ：外部中断0函数
+  84          // 参数   ：无 
+  85          // 返回值 ：无
+  86          // 注释   : 无
+  87          
+  88          void ext0() interrupt 0 
+  89          {
+  90   1              myMassage.CycleUpDown ++ ;
+  91   1      }
+  92          
+  93          
+  94          // 函数名 ：外部中断1函数
+  95          // 参数   ：无 
+  96          // 返回值 ：无
+  97          // 注释   : 无
+  98          void ext1() interrupt 2 
+  99          {
+ 100   1              myMassage.AngleCount ++ ;
+ 101   1              
+ 102   1              if( 0 == mda_pin )
+ 103   1              {
+ 104   2                      myMassage.CycleKne ++ ;
+ 105   2                      myMassage.AngleCount = 0;
+ 106   2                      //msg[3]--;
+ 107   2              }
+ 108   1      }
+ 109          
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    136    ----
+   CODE SIZE        =    133    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
+C51 COMPILER V9.01   TIMER                                                                 02/22/2017 17:27:16 PAGE 3   
+
    DATA SIZE        =   ----    ----
    IDATA SIZE       =   ----    ----
-C51 COMPILER V9.01   TIMER                                                                 02/20/2017 15:30:13 PAGE 3   
-
    BIT SIZE         =   ----    ----
 END OF MODULE INFORMATION.
 

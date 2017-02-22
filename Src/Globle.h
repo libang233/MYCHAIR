@@ -2,7 +2,7 @@
 // 作者   : 赵成华 赵成华 陈统 何立邦 何立邦
 // 日期   : 2017年 2月 15日
 
-//#include "globle.h"
+#include "newtype.h"
 
 #ifndef _GLOBAL_H_
 #define _GLOBAL_H_
@@ -18,7 +18,7 @@
 #define up	    0x01
 #define dn	    0x02
 
-#define TIME_DOG  	4								// 看门狗计数器
+#define TIME_DOG  	4							// 看门狗计数器
 #define TIME_SEC    16							// 1秒定时
 #define TIME_MIN    60							// 1分钟定时
 #define TIMER0_ORG  0x1F						// 定时器0初始化装载值
@@ -26,9 +26,17 @@
 #define ADD_SPEED   50							// 每次按键增加的速度
 #define INIT_SPEED	105							// 揉捏拍打初始化速度
 #define HIGH_SPEED	205							// 揉捏拍打高速度	
-#define MAX_SPEED   255 						// 最大速度
-#define WiDTH_SPEED 105                         // 宽度调整速度
-#define DIFFERENT_SPEED 50					    //揉捏和拍打速度差
+#define MAX_SPEED   205 						// 最大速度
+#define WiDTH_SPEED 155                         // 宽度调整速度
+#define DIFFERENT_SPEED 0					    // 揉捏和拍打速度差
+
+#define ATUO_ONE    0x01				    	// 自动模式1 的动作编号
+#define ATUO_TWO    0x02						// 自动模式2 的动作编号
+#define ATUO_THREE  0x03						// 自动模式3 的动作编号
+#define PER_KNE     0x04						// 同时进行揉捏敲打 动作编号
+#define KNE         0x05 						// 按摩的动作编号 
+#define PER         0x06						// 敲打的动作编号
+
 
 //定义端口
 

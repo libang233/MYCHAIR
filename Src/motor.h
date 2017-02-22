@@ -12,15 +12,17 @@
 
 /************************************** º¯Êý¹«¿ª ********************************************/
 
-void auto_1(void);
-//void auto_2(void);
+void auto_one(void);
+void auto_two(void);
 //void auto_3(void);
 void kne(void);
 void per(void);
 void per_kne(void);
-void changeWidth(void);
+void ChangeWidth(void);
 void Init_PWM(void);
 void allMotorsStop(void);
 void Init_Motor(void);
+//void allMotorsGoOn(void) ;
+void reset(void);
 
 #endif

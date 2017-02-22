@@ -1,4 +1,4 @@
-C51 COMPILER V9.01   SERIAL                                                                02/20/2017 15:30:13 PAGE 1   
+C51 COMPILER V9.01   SERIAL                                                                02/22/2017 17:27:16 PAGE 1   
 
 
 C51 COMPILER V9.01, COMPILATION OF MODULE SERIAL
@@ -42,7 +42,7 @@ line level    source
   32          {
   33   1      
   34   1              RI = 0;                                                                                 // 接收标记位清零
-  35   1              mySerial.Res = SBUF;                                                                            // 串口接收完成，将串口接收到的值存放在串口接收数据结构
+  35   1              mySerial.Res = SBUF;                                                                    // 串口接收完成，将串口接收到的值存放在串口接收数据结构
   36   1      
   37   1              myEvnt.Bit.IsSerial_RX = true;                                                  // 串口接收完成，申请数据处理
   38   1      }
@@ -62,221 +62,292 @@ line level    source
   52   2                      case 0xAA :                                                                                                             // 定时接收到手控板串口指令
   53   2                                      ES = 0;
   54   2                                      for(i=0;i<7;i++)
-C51 COMPILER V9.01   SERIAL                                                                02/20/2017 15:30:13 PAGE 2   
+C51 COMPILER V9.01   SERIAL                                                                02/22/2017 17:27:16 PAGE 2   
 
   55   2                                      {
   56   3                                              SBUF = SendMsg[i];                                                                      // 7位数据串口应答发送
   57   3                                              while( !TI );
   58   3                                                      TI=0;
   59   3                                      }
-  60   2                                                      ES = 1;
+  60   2                                      ES = 1;
   61   2                              break;
   62   2              
   63   2                      case 0X03 :                                                                                                             // 接收到开机键按钮
   64   2                                      if( !(SendMsg[0] & 0x01) )                                                              // 目前关机状态收到开机指令
   65   2                                      {               
-  66   3                                              SendMsg[0] = SendMsg[0] | 0x01 ;                
-  67   3                                      }
-  68   2                                      else
-  69   2                                      {
-  70   3                                              SendMsg[0] = SendMsg[0] & (~0x01) ;
-  71   3                                      }
-  72   2                                      mySerial.action_N = 0x00;
-  73   2                                      myEvnt.Bit.IsReset_F = true ;                                           // 申请重置     
-  74   2                              break;  
-  75   2                      
-  76   2                      case 0x01 :                                                                                                             // 接收到定时按键
-  77   2                                      if( SendMsg[3] == 0x1E)
-  78   2                                      {
-  79   3                                              SendMsg[3] = 0x0A;
-  80   3                                      }
-  81   2                                      else if(SendMsg[3] == 0x0A)
-  82   2                                      {                       
-  83   3                                              SendMsg[3]=0x14;
-  84   3                                      }
-  85   2                                      else 
-  86   2                                      {
-  87   3                                              SendMsg[3]=0x1E;
-  88   3                                      }
-  89   2                              break;                                                                                                                          
-  90   2                      
-  91   2                      case 0x02 :                                                                                                     // PAUSE暂停
-  92   2                                      if(SendMsg[1] & 0x01)
-  93   2                                      {
-  94   3                          SendMsg[1] = SendMsg[1] & 0xF0;
-  95   3                                              myEvnt.Bit.IsChange = true ;
-  96   3                                      }
-  97   2                                      else
-  98   2                                      {
-  99   3                          SendMsg[1] = SendMsg[1] & 0xF0 | 0x01;
- 100   3                                              
- 101   3                                      }
- 102   2                                      myEvnt.Bit.IsAllMotorsStop = true ;                                     // 申请所有电机停止工作
- 103   2                              break;                                                                                                                  
- 104   2                      
- 105   2                      case 0x04 : 
- 106   2                                              SendMsg[0]=SendMsg[0] & 0xF0 | 0x09;                            // vibratig 按摩椅震动
- 107   2                              break;                                                                                                          
- 108   2                      
- 109   2                      case 0x05 :                                                                                                     // neck&shouder改成auto_2
- 110   2                                              SendMsg[0]=SendMsg[0] & 0x0F | 0x20 ;
- 111   2                                              SendMsg[1]=SendMsg[1] & 0x00 ;
- 112   2                                              
- 113   2                                              myEvnt.Bit.IsAllMotorsStop = true ;                                     // 申请所有电机停止工作
- 114   2                                              myEvnt.Bit.IsAuto_Two = true ;                                          // 申请自动模式2
- 115   2                                              mySerial.action_N = 0x02;                                                       // 动作编号2
- 116   2                                              
-C51 COMPILER V9.01   SERIAL                                                                02/20/2017 15:30:13 PAGE 3   
+  66   3                                              SendMsg[0] = SendMsg[0] | 0x01 ;
+  67   3                                              myEvnt.Bit.IsReset_F = true ;                                   // 申请重置
+  68   3                                      }
+  69   2                                      else
+  70   2                                      {
+  71   3                                              SendMsg[0] = SendMsg[0] & (~0x01) ;                                     // 第二次按开机键申请关机
+  72   3                                              myEvnt.Bit.IsPOWER_OFF = true ;
+  73   3                                      }
+  74   2                      
+  75   2                      case 0x01 :                                                                                                             // 接收到定时按键
+  76   2                                      if( SendMsg[3] == 0x1E)
+  77   2                                      {
+  78   3                                              SendMsg[3] = 0x0A;
+  79   3                                      }
+  80   2                                      else if(SendMsg[3] == 0x0A)
+  81   2                                      {                       
+  82   3                                              SendMsg[3]=0x14;
+  83   3                                      }
+  84   2                                      else 
+  85   2                                      {
+  86   3                                              SendMsg[3]=0x1E;
+  87   3                                      }
+  88   2                              break;                                                                                                                          
+  89   2                      
+  90   2                      case 0x02 :                                                                                                     // PAUSE暂停
+  91   2                                      if(SendMsg[1] & 0x01)                                                                   
+  92   2                                      {                                                                                                               // 第二次按下暂停键 恢复工作
+  93   3                                              SendMsg[1] = SendMsg[1] & 0xF0;
+  94   3                                              myEvnt.Bit.IsStoping = false ;
+  95   3                                              switch(mySerial.action_N)
+  96   3                                              {
+  97   4                                                              case PER_KNE :
+  98   4                                                          myEvnt.Bit.IsPerKne = true ;                                        // 申请同时按摩和捶背
+  99   4                                                                  break ;
+ 100   4                                                              
+ 101   4                                                              case KNE :
+ 102   4                                                                              myEvnt.Bit.IsKne = true ;                                                       // 申请揉捏
+ 103   4                                                                      break ;
+ 104   4                                                              
+ 105   4                                                              case PER :
+ 106   4                                                                              myEvnt.Bit.IsPer = true ;                                                       // 申请捶背
+ 107   4                                                                      break ;
+ 108   4                                                              
+ 109   4                                                              default : break ;
+ 110   4                                              }
+ 111   3                                              
+ 112   3                                      }
+ 113   2                                      else                                                                                                    // 第一次按下暂停键
+ 114   2                                      {
+ 115   3                                          SendMsg[1] = SendMsg[1] & 0xF0 | 0x01;
+ 116   3                                              myEvnt.Bit.IsStoping = true ;
+C51 COMPILER V9.01   SERIAL                                                                02/22/2017 17:27:16 PAGE 3   
 
- 117   2                                              myMassage.CycleKne = 0 ;                                                        // 揉捏圈数计数清零
- 118   2                                              myMassage.AngleCount = 0 ;                                                      // 揉捏角度计数清零
- 119   2                              break;                                                                                                          
- 120   2      
- 121   2                      case 0x06 : 
- 122   2                                              SendMsg[0]=SendMsg[0] & 0x0F | 0x10;                            // back&waist改成auto_3
- 123   2                                              SendMsg[1]=SendMsg[1] & 0x00 ;
- 124   2                                              
- 125   2                                              myEvnt.Bit.IsAllMotorsStop = true ;                                     // 申请所有电机停止工作
- 126   2                                              myEvnt.Bit.IsAuto_Three = true ;                                        // 申请自动模式3
- 127   2                                              mySerial.action_N = 0x03;                                                       // 动作编号3            
- 128   2                              break;  
- 129   2              
- 130   2                      case 0x07 :                                                                                                     // pause改成auto_1
- 131   2                                              SendMsg[1] = SendMsg[1] & 0x00 | 0x40;
- 132   2                                              SendMsg[0] = SendMsg[0] & 0x0F;
- 133   2                                              
- 134   2                                              myEvnt.Bit.IsAllMotorsStop = true ;                                     // 申请所有电机停止工作
- 135   2                                              myEvnt.Bit.IsAuto_One = true ;                                          // 申请自动模式1
- 136   2                                              mySerial.action_N = 0x01;                                                       // 动作编号1
- 137   2                              break;  
- 138   2                      
- 139   2                      case 0x09 :                                                                                                         // 捶背percussion
- 140   2                                              SendMsg[1] = SendMsg[1] & 0x00;
- 141   2                                              SendMsg[0] = SendMsg[0] & 0x0F | 0x80;
- 142   2                      
- 143   2                                              myEvnt.Bit.IsAllMotorsStop = true ;                                     // 申请所有电机停止工作         
- 144   2                                              myEvnt.Bit.IsPer = true ;                                                       // 申请捶背
- 145   2                                              
- 146   2                                              mySerial.action_N = 0x06;
- 147   2                              break;  
- 148   2                      
- 149   2                      case 0x0A :                                                                                                     // percussion+knead     捶背和按摩
- 150   2                                              SendMsg[0] = SendMsg[0] & 0x0F;
- 151   2                                              SendMsg[1] = SendMsg[1] & 0x00 | 0x02;
- 152   2                                              
- 153   2                                              myEvnt.Bit.IsAllMotorsStop = true ;                                     // 申请所有电机停止工作
- 154   2                                              myEvnt.Bit.IsPerKne = true ;                                    // 申请同时按摩和捶背
- 155   2                                                      
- 156   2                                              mySerial.action_N = 0x04;
- 157   2                              
- 158   2                              break; 
- 159   2                      
- 160   2                      case 0x0B :                                                                                                             // 速度调整按键 
- 161   2                                              if( myMassage.speed < MAX_SPEED )
- 162   2                                              {               
- 163   3                                                      if( myMassage.speed <= HIGH_SPEED )
- 164   3                                                      {
- 165   4                                                              myMassage.speed = myMassage.speed + ADD_SPEED;
- 166   4                                                      }
- 167   3                                                      else
- 168   3                                                      {
- 169   4                                                              myMassage.speed = INIT_SPEED ;
- 170   4                                                      }       
- 171   3                                              }
- 172   2                                              else
- 173   2                                              {
- 174   3                                                      myMassage.speed = INIT_SPEED ;
- 175   3                                              }
- 176   2                                              
- 177   2                                              myEvnt.Bit.IsChange = true ;
- 178   2                                              
-C51 COMPILER V9.01   SERIAL                                                                02/20/2017 15:30:13 PAGE 4   
+ 117   3                                              myEvnt.Bit.IsAllMotorsStop = true ;                                     // 申请所有电机停止工作                                 
+ 118   3                                              
+ 119   3      
+ 120   3                                      }
+ 121   2                                      
+ 122   2                              break;                                                                                                                  
+ 123   2                      
+ 124   2                      case 0x04 : 
+ 125   2                                              SendMsg[0]=SendMsg[0] & 0xF0 | 0x09;                            // vibratig 按摩椅震动
+ 126   2                              break;                                                                                                          
+ 127   2                      
+ 128   2                      case 0x05 :                                                                                                     // neck&shouder改成auto_2
+ 129   2      //                                      SendMsg[0]=SendMsg[0] & 0x0F | 0x20 ;
+ 130   2      //                                      SendMsg[1]=SendMsg[1] & 0x00 ;
+ 131   2      
+ 132   2                                              if(false == myEvnt.Bit.IsAuto_Two)
+ 133   2                                              {                       
+ 134   3                                              SendMsg[0]=SendMsg[0] & 0x0F | 0x20 ;
+ 135   3                                              SendMsg[1]=SendMsg[1] & 0x00 ;
+ 136   3                                                  mySerial.action_N = ATUO_TWO;                                       // 动作编号2
+ 137   3                                                      myEvnt.Bit.IsAutoBegin = true ;                                 // 初始化计时判断
+ 138   3                                                      myEvnt.Bit.IsAuto_Two = true ;                              // 申请自动模式2                                                    
+ 139   3                                                      myMassage.autoNum = 0x00;                                               // 初始化自动状态编号
+ 140   3                                                  myEvnt.Bit.IsAuto_One = false ;                                 
+ 141   3                                                      myEvnt.Bit.IsAuto_Three = false ;
+ 142   3                                                      myEvnt.Bit.IsStoping = false ;  
+ 143   3                                              }
+ 144   2                                              else
+ 145   2                                              {
+ 146   3                                                  SendMsg[0] = SendMsg[0] & 0xDF;
+ 147   3                                                  myEvnt.Bit.IsAuto_Two = false;                                      // 申请关闭自动模式2
+ 148   3                                                      myEvnt.Bit.IsStoping = true ;
+ 149   3                                              }
+ 150   2                                              myEvnt.Bit.IsAllMotorsStop = true ;                                     // 申请所有电机停止工作
+ 151   2                              break;                                                                                                          
+ 152   2      
+ 153   2                      case 0x06 : 
+ 154   2                                              SendMsg[0]=SendMsg[0] & 0x0F | 0x10;                            // back&waist改成auto_3
+ 155   2                                              SendMsg[1]=SendMsg[1] & 0x00 ;
+ 156   2                                              
+ 157   2                                              myEvnt.Bit.IsAllMotorsStop  = true ;                            // 申请所有电机停止工作
+ 158   2                                              myEvnt.Bit.IsAuto_Three = true ;                                        // 申请自动模式3
+ 159   2                                              mySerial.action_N = ATUO_THREE;                                         // 动作编号3            
+ 160   2                              break;  
+ 161   2              
+ 162   2                      case 0x07 :                                                                                                     // pause改成auto_1
+ 163   2      //                                      SendMsg[0] = SendMsg[0] & 0x0F;
+ 164   2                                              
+ 165   2                                              if(false == myEvnt.Bit.IsAuto_One)
+ 166   2                                              {                       
+ 167   3                                                  SendMsg[1] = SendMsg[1] & 0x00 | 0x40;
+ 168   3                                              SendMsg[0] = SendMsg[0] & 0x0F;
+ 169   3                                                  mySerial.action_N = ATUO_ONE;                                       // 动作编号1
+ 170   3                                                      myMassage.autoNum = 0x00;                                               // 初始化自动状态编号
+ 171   3                                                      myEvnt.Bit.IsAutoBegin = true ;                                 // 初始化计时判断
+ 172   3                                                      myEvnt.Bit.IsAuto_One = true ;                              // 申请自动模式1
+ 173   3                                                      myEvnt.Bit.IsAuto_Two = false ;                             
+ 174   3                                                      myEvnt.Bit.IsAuto_Three = false ;
+ 175   3                                                      myEvnt.Bit.IsStoping = false ;                          
+ 176   3              
+ 177   3                                              }
+ 178   2                                              else
+C51 COMPILER V9.01   SERIAL                                                                02/22/2017 17:27:16 PAGE 4   
 
- 179   2                              break;  
- 180   2                                                                              
- 181   2                      case 0x0C : 
- 182   2                                              seatm_up =0  ;
- 183   2                                              seatm_dn =1  ;                                  
- 184   2                              break;                                                                                                          // seat向前移动     //0C AA... 0C 1E
- 185   2                      
- 186   2                      case 0X0D :                                                                                                     // kneading 按摩揉捏
- 187   2                                              SendMsg[1] = SendMsg[1] & 0x00;
- 188   2                                              SendMsg[0] = SendMsg[0] & 0x0F | 0x40;
- 189   2                                      
- 190   2                                              myEvnt.Bit.IsAllMotorsStop = true;                                      // 申请所有电机停止工作
- 191   2                                      myEvnt.Bit.IsKne =  true;                                                                                                        // 申请揉捏
- 192   2                                              mySerial.action_N=0x05;  
- 193   2                              break;  
- 194   2                      
- 195   2                      case 0x0E :                                                                                                                             // 申请按摩宽度调整
- 196   2                                              myEvnt.Bit.IsChangeWidth = true ;                                                                                       
- 197   2                              break;                                                                                                                                  
+ 179   2                                              {
+ 180   3                                                  SendMsg[1] = SendMsg[1] & 0x00;
+ 181   3                                                  myEvnt.Bit.IsAuto_One = false ;                                     // 申请关闭自动模式1
+ 182   3                                                  myEvnt.Bit.IsStoping = true ;
+ 183   3                                              }
+ 184   2                                              myEvnt.Bit.IsAllMotorsStop = true ;                                     // 申请所有电机停止工作
+ 185   2      
+ 186   2                              break;  
+ 187   2                      
+ 188   2                      case 0x09 :                                                                                                         // 捶背percussion
+ 189   2                                              SendMsg[1] = SendMsg[1] & 0x00;
+ 190   2                                              SendMsg[0] = SendMsg[0] & 0x0F | 0x80;
+ 191   2                                              myEvnt.ALL = 0;
+ 192   2                                              myEvnt.Bit.IsAllMotorsStop = true ;                                     // 申请所有电机停止工作         
+ 193   2                                              myEvnt.Bit.IsPer = true ;                                                       // 申请捶背
+ 194   2                                              myEvnt.Bit.IsStoping = false ;
+ 195   2                                              
+ 196   2                                              mySerial.action_N = PER ;
+ 197   2                              break;  
  198   2                      
- 199   2                      case 0x0F : 
- 200   2                                              if(upCheck)
- 201   2                                              {
- 202   3                                                      upm=0;
- 203   3                                              }
- 204   2                              
- 205   2                              break;                                                                                                                                  // upper 上升       // 0F AA... 0F 1F 
- 206   2                      
- 207   2                      case 0x10 : 
- 208   2                                              seatm_up =1  ;
- 209   2                                              seatm_dn =0  ;
- 210   2                              break;                                                                                                                                  // seat向后移动     // 10 AA... 10 20 
- 211   2                      
- 212   2                      case 0x11 : 
- 213   2                                              backm_up  =0 ;
- 214   2                                              backm_dn  =1 ;
- 215   2                              break;                                                                                                                                  // back向后移动     // 11 AA... 11 21
- 216   2                      
- 217   2                      case 0x12 : 
- 218   2                                              backm_up  =1 ;
- 219   2                                              backm_dn  =0 ;
- 220   2                              break;                                                                                                                                  // back向前移动     // 12 AA... 12 22 
- 221   2                      
- 222   2                      case 0x13 :
- 223   2                                              if(dnCheck)
+ 199   2                      case 0x0A :                                                                                                     // percussion+knead     捶背和按摩
+ 200   2                                              SendMsg[0] = SendMsg[0] & 0x0F;
+ 201   2                                              SendMsg[1] = SendMsg[1] & 0x00 | 0x02;
+ 202   2                                              myEvnt.ALL = 0;
+ 203   2                                              myEvnt.Bit.IsAllMotorsStop = true ;                                     // 申请所有电机停止工作
+ 204   2                                              myEvnt.Bit.IsPerKne = true ;                                    // 申请同时按摩和捶背
+ 205   2                                              myEvnt.Bit.IsStoping = false ;
+ 206   2                                                      
+ 207   2                                              mySerial.action_N = PER_KNE;
+ 208   2                              
+ 209   2                              break; 
+ 210   2                      
+ 211   2                      case 0x0B :                                                                                                             // 速度调整按键 
+ 212   2                                              if( myMassage.speed < MAX_SPEED )
+ 213   2                                              {               
+ 214   3                                                      if( myMassage.speed <= HIGH_SPEED )
+ 215   3                                                      {
+ 216   4                                                              myMassage.speed = myMassage.speed + ADD_SPEED;
+ 217   4                                                      }
+ 218   3                                                      else
+ 219   3                                                      {
+ 220   4                                                              myMassage.speed = INIT_SPEED ;
+ 221   4                                                      }       
+ 222   3                                              }
+ 223   2                                              else
  224   2                                              {
- 225   3                                                  dnm=0;
- 226   3                                              }               
- 227   2                              break;                                                                                                                                  // lower下降        // 13 AA... 13 23
- 228   2                      case 0x1E : 
- 229   2                                              seatm_up =1  ;
- 230   2                                              seatm_dn =1;
- 231   2                              break;  //
- 232   2                      case 0x1F : 
- 233   2                                              upm=1;
- 234   2                              break;  //
- 235   2                      case 0x20 : 
- 236   2                                              seatm_up =1  ;
- 237   2                                              seatm_dn =1;
- 238   2                              break;  //
- 239   2                      case 0x21 :     
- 240   2                                              backm_up =1 ;
-C51 COMPILER V9.01   SERIAL                                                                02/20/2017 15:30:13 PAGE 5   
+ 225   3                                                      myMassage.speed = INIT_SPEED ;
+ 226   3                                              }
+ 227   2                                              switch(mySerial.action_N)
+ 228   2                                              {
+ 229   3                                                              case PER_KNE :
+ 230   3                                                          myEvnt.Bit.IsPerKne = true ;                                        // 申请同时按摩和捶背
+ 231   3                                                                  break ;
+ 232   3                                                              
+ 233   3                                                              case KNE :
+ 234   3                                                                              myEvnt.Bit.IsKne = true ;                                                       // 申请揉捏
+ 235   3                                                                      break ;
+ 236   3                                                              
+ 237   3                                                              case PER :
+ 238   3                                                                              myEvnt.Bit.IsPer = true ;                                                       // 申请捶背
+ 239   3                                                                      break ;
+ 240   3                                                              
+C51 COMPILER V9.01   SERIAL                                                                02/22/2017 17:27:16 PAGE 5   
 
- 241   2                                              backm_dn =1 ;
- 242   2                              break;  //
- 243   2                      case 0x22 :     
- 244   2                                              backm_up =1 ;
- 245   2                                              backm_dn =1 ;
- 246   2                              break;  //
- 247   2                      case 0x23 : 
- 248   2                                              dnm=1;
- 249   2                              break;  //
- 250   2                      
- 251   2                      default : break ;
- 252   2                      }
- 253   1      }
- 254          
- 255          
- 256          
- 257          
+ 241   3                                                              default : break ;
+ 242   3                                              }
+ 243   2      
+ 244   2                                              
+ 245   2                              break;  
+ 246   2                                                                              
+ 247   2                      case 0x0C :                                                                                                     // seat向前移动     //0C AA... 0C 1E
+ 248   2                                              seatm_up =0  ;
+ 249   2                                              seatm_dn =1  ;                                  
+ 250   2                              break;                                                                                                          
+ 251   2                      
+ 252   2                      case 0X0D :                                                                                                     // kneading 按摩揉捏
+ 253   2                                              SendMsg[1] = SendMsg[1] & 0x00;
+ 254   2                                              SendMsg[0] = SendMsg[0] & 0x0F | 0x40;
+ 255   2                                              myEvnt.ALL =0;
+ 256   2                                              myEvnt.Bit.IsAllMotorsStop = true;                                      // 申请所有电机停止工作
+ 257   2                                      myEvnt.Bit.IsKne =  true;                                                   // 申请揉捏
+ 258   2                                              mySerial.action_N = KNE ;
+ 259   2                                              myEvnt.Bit.IsStoping = false ;   
+ 260   2                              break;  
+ 261   2                      
+ 262   2                      case 0x0E :                                                                                                                             // 申请按摩宽度调整
+ 263   2                                              myEvnt.Bit.IsChangeWidth = true ;                                                                                       
+ 264   2                              break;                                                                                                                                  
+ 265   2                      
+ 266   2                      case 0x0F : 
+ 267   2                                              if(upCheck && (ATUO_ONE != mySerial.action_N || ATUO_TWO != mySerial.action_N || ATUO_THREE != mySeri
+             -al.action_N))
+ 268   2                                              {
+ 269   3                                                      upm=0;
+ 270   3                                              }
+ 271   2                              
+ 272   2                              break;                                                                                                                                  // upper 上升       // 0F AA... 0F 1F 
+ 273   2                      
+ 274   2                      case 0x10 : 
+ 275   2                                              seatm_up =1  ;
+ 276   2                                              seatm_dn =0  ;
+ 277   2                              break;                                                                                                                                  // seat向后移动     // 10 AA... 10 20 
+ 278   2                      
+ 279   2                      case 0x11 : 
+ 280   2                                              backm_up  =0 ;
+ 281   2                                              backm_dn  =1 ;
+ 282   2                              break;                                                                                                                                  // back向后移动     // 11 AA... 11 21
+ 283   2                      
+ 284   2                      case 0x12 : 
+ 285   2                                              backm_up  =1 ;
+ 286   2                                              backm_dn  =0 ;
+ 287   2                              break;                                                                                                                                  // back向前移动     // 12 AA... 12 22 
+ 288   2                      
+ 289   2                      case 0x13 :
+ 290   2                                              if(dnCheck && (ATUO_ONE != mySerial.action_N || ATUO_TWO != mySerial.action_N || ATUO_THREE != mySeri
+             -al.action_N))
+ 291   2                                              {
+ 292   3                                                  dnm=0;
+ 293   3                                              }               
+ 294   2                              break;                                                                                                                                  // lower下降        // 13 AA... 13 23
+ 295   2                      case 0x1E : 
+ 296   2                                              seatm_up =1  ;
+ 297   2                                              seatm_dn =1;
+ 298   2                              break;  //
+ 299   2                      case 0x1F : 
+ 300   2                                              upm=1;
+C51 COMPILER V9.01   SERIAL                                                                02/22/2017 17:27:16 PAGE 6   
+
+ 301   2                              break;  //
+ 302   2                      case 0x20 : 
+ 303   2                                              seatm_up =1  ;
+ 304   2                                              seatm_dn =1;
+ 305   2                              break;  //
+ 306   2                      case 0x21 :     
+ 307   2                                              backm_up =1 ;
+ 308   2                                              backm_dn =1 ;
+ 309   2                              break;  //
+ 310   2                      case 0x22 :     
+ 311   2                                              backm_up =1 ;
+ 312   2                                              backm_dn =1 ;
+ 313   2                              break;  //
+ 314   2                      case 0x23 : 
+ 315   2                                              dnm=1;
+ 316   2                              break;  //
+ 317   2                      
+ 318   2                      default : break ;
+ 319   2                      }
+ 320   1      }
+ 321          
+ 322          
+ 323          
+ 324          
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    595    ----
+   CODE SIZE        =    727    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----

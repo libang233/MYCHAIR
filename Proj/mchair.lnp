@@ -1,7 +1,6 @@
 ".\main.obj",
 ".\Serial.obj",
 ".\Timer.obj",
-".\motor.obj",
-".\reset.obj" 
+".\motor.obj" 
 TO "mchair" 
 RAMSIZE(256) 
